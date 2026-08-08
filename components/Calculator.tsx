@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 
 type Inputs = {
   mau: number; dauRate: number; sessions: number; reads: number; writes: number;
@@ -64,7 +64,11 @@ function estimate(v: Inputs, mau = v.mau) {
 
 const money = (n: number) => n < .01 && n > 0 ? `$${n.toFixed(4)}` : `$${n.toLocaleString("en-US", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
 
-function Field({ label, value, onChange, step = 1, suffix, min = 0 }: { label: string; value: number; onChange: (n: number) => void; step?: number; suffix?: string; min?: number }) {
+function Term({ children, description }: { children: ReactNode; description: string }) {
+  return <span className="term"><button type="button" className="term-trigger" onClick={e => e.stopPropagation()} aria-label={`${String(children)}の説明。${description}`}>{children}<span aria-hidden="true">?</span></button><span className="tooltip" role="tooltip">{description}</span></span>;
+}
+
+function Field({ label, value, onChange, step = 1, suffix, min = 0 }: { label: ReactNode; value: number; onChange: (n: number) => void; step?: number; suffix?: string; min?: number }) {
   return <label className="field"><span>{label}</span><span className="input-wrap"><input type="number" min={min} step={step} value={value} onChange={e => onChange(Math.max(min, Number(e.target.value)))} />{suffix && <b>{suffix}</b>}</span></label>;
 }
 
@@ -77,7 +81,7 @@ export default function Calculator() {
   return <main>
     <header className="topbar"><a className="brand" href="#top"><span className="brandmark">F</span> Firebase Cost Lab</a><div className="status"><i /> 料金データ {pricing.version}</div></header>
     <section className="hero" id="top">
-      <div><p className="eyebrow">BLAZE PLAN ESTIMATOR</p><h1>成長しても、<br /><em>請求額で驚かない。</em></h1><p className="lead">ユーザー数と使われ方から、Firebaseの月額コストをその場で試算。無料枠は日単位で正しく差し引きます。</p></div>
+      <div><p className="eyebrow">BLAZE料金シミュレーター</p><h1>成長しても、<br /><em>請求額で驚かない。</em></h1><p className="lead">ユーザー数と使われ方から、Firebaseの月額コストをその場で試算。無料枠は日単位で正しく差し引きます。</p></div>
       <aside className="hero-note"><span>POINT 01</span><strong>Blazeに固定月額はありません</strong><p>無料枠を超えた分だけ支払う従量課金です。</p></aside>
     </section>
 
@@ -85,34 +89,34 @@ export default function Calculator() {
       <div className="controls">
         <div className="mode-tabs"><button className={mode === "simple" ? "active" : ""} onClick={() => setMode("simple")}>かんたん見積もり</button><button className={mode === "detail" ? "active" : ""} onClick={() => setMode("detail")}>詳細見積もり</button></div>
         {mode === "simple" ? <>
-          <div className="section-label">01 — AUDIENCE</div>
-          <Field label="月間ユーザー数（MAU）" value={v.mau} onChange={n => set("mau", n)} suffix="人" />
-          <Field label="1日に利用する割合（DAU / MAU）" value={v.dauRate} onChange={n => set("dauRate", n)} suffix="%" />
+          <div className="section-label">01 — ユーザー数</div>
+          <Field label={<>月間ユーザー数（<Term description="Monthly Active Usersの略。1か月の間に1回以上アプリを利用した人数です。">MAU</Term>）</>} value={v.mau} onChange={n => set("mau", n)} suffix="人" />
+          <Field label={<>1日に利用する割合（<Term description="Daily Active Usersの略。1日の間にアプリを利用した人数です。">DAU</Term> / <Term description="Monthly Active Usersの略。1か月の間に1回以上アプリを利用した人数です。">MAU</Term>）</>} value={v.dauRate} onChange={n => set("dauRate", n)} suffix="%" />
           <Field label="1人あたり1日の起動回数" value={v.sessions} onChange={n => set("sessions", n)} step={.1} suffix="回" />
-          <div className="section-label">02 — APP TYPE</div>
-          <label className="field stack"><span>アプリの使われ方</span><select aria-label="アプリの使われ方" value={v.realtime ? "realtime" : v.reads === 6 ? "light" : "standard"} onChange={e => { const p = presets[e.target.value]; setV(old => ({ ...old, ...p, realtime: e.target.value === "realtime" })); }}><option value="light">軽量な閲覧中心アプリ</option><option value="standard">普通のCRUDアプリ</option><option value="realtime">リアルタイム更新が多いアプリ</option></select></label>
-          <label className="toggle"><span><strong>Identity Platform</strong><small>50,000 MAUを超えると段階課金</small></span><input aria-label="Identity Platformを使用" type="checkbox" checked={v.auth === "identity"} onChange={e => set("auth", e.target.checked ? "identity" : "standard")} /><i /></label>
-          <Field label="電話番号認証（1日）" value={v.smsDay} onChange={n => set("smsDay", n)} suffix="SMS" />
+          <div className="section-label">02 — アプリの種類</div>
+          <label className="field stack"><span>アプリの使われ方</span><select aria-label="アプリの使われ方" value={v.realtime ? "realtime" : v.reads === 6 ? "light" : "standard"} onChange={e => { const p = presets[e.target.value]; setV(old => ({ ...old, ...p, realtime: e.target.value === "realtime" })); }}><option value="light">軽量な閲覧中心アプリ</option><option value="standard">一般的な登録・閲覧・更新アプリ</option><option value="realtime">リアルタイム更新が多いアプリ</option></select></label>
+          <label className="toggle"><span><strong><Term description="Firebase Authenticationを企業向けに拡張した認証サービス。月間利用者数に応じて課金されます。">Identity Platform</Term></strong><small>50,000 MAUを超えると段階課金</small></span><input aria-label="Identity Platformを使用" type="checkbox" checked={v.auth === "identity"} onChange={e => set("auth", e.target.checked ? "identity" : "standard")} /><i /></label>
+          <Field label="電話番号認証（1日）" value={v.smsDay} onChange={n => set("smsDay", n)} suffix="通" />
         </> : <>
-          <div className="section-label">USAGE — 詳細入力</div>
-          <div className="grid2"><Field label="MAU" value={v.mau} onChange={n => set("mau", n)} /><Field label="DAU率" value={v.dauRate} onChange={n => set("dauRate", n)} suffix="%" /><Field label="起動 / 人・日" value={v.sessions} onChange={n => set("sessions", n)} step={.1} /><Field label="Reads / セッション" value={v.reads} onChange={n => set("reads", n)} /><Field label="Writes / セッション" value={v.writes} onChange={n => set("writes", n)} /><Field label="Deletes / セッション" value={v.deletes} onChange={n => set("deletes", n)} step={.1} /><Field label="Firestore保存" value={v.firestoreGb} onChange={n => set("firestoreGb", n)} step={.1} suffix="GiB" /><Field label="SMS / 日" value={v.smsDay} onChange={n => set("smsDay", n)} /></div>
-          <label className="toggle"><span><strong>リアルタイムリスナー</strong><small>readを1.6倍で概算</small></span><input aria-label="リアルタイムリスナーを使用" type="checkbox" checked={v.realtime} onChange={e => set("realtime", e.target.checked)} /><i /></label>
-          <label className="toggle"><span><strong>Identity Platform</strong><small>通常Firebase Authは無料で計算</small></span><input aria-label="Identity Platformを使用" type="checkbox" checked={v.auth === "identity"} onChange={e => set("auth", e.target.checked ? "identity" : "standard")} /><i /></label>
-          <div className="section-label">STORAGE & COMPUTE</div>
-          <div className="grid2"><Field label="Storage保存" value={v.storageGb} onChange={n => set("storageGb", n)} step={.1} suffix="GB" /><Field label="Storage DL / 日" value={v.downloadMbDay} onChange={n => set("downloadMbDay", n)} suffix="MB" /><Field label="Upload操作 / 日" value={v.uploadDay} onChange={n => set("uploadDay", n)} /><Field label="Download操作 / 日" value={v.downloadOpsDay} onChange={n => set("downloadOpsDay", n)} /><Field label="Functions / 月" value={v.functionsMonth} onChange={n => set("functionsMonth", n)} /><Field label="平均実行時間" value={v.functionSeconds} onChange={n => set("functionSeconds", n)} step={.1} suffix="秒" /><Field label="メモリ" value={v.functionMemory} onChange={n => set("functionMemory", n)} step={.25} suffix="GiB" /><Field label="Hosting転送 / 日" value={v.hostingGbDay} onChange={n => set("hostingGbDay", n)} step={.1} suffix="GB" /></div>
+          <div className="section-label">利用状況 — 詳細入力</div>
+          <div className="grid2"><Field label={<Term description="1か月の間に1回以上アプリを利用した人数です。">月間利用者（MAU）</Term>} value={v.mau} onChange={n => set("mau", n)} /><Field label={<Term description="月間利用者のうち、平均して1日に何％が利用するかを表します。">1日の利用率（DAU率）</Term>} value={v.dauRate} onChange={n => set("dauRate", n)} suffix="%" /><Field label="起動回数 / 人・日" value={v.sessions} onChange={n => set("sessions", n)} step={.1} /><Field label={<Term description="データベースから文書を読み出す回数です。画面表示や検索で増えます。">読み取り / 利用1回</Term>} value={v.reads} onChange={n => set("reads", n)} /><Field label={<Term description="データベースに文書を新規作成・更新する回数です。">書き込み / 利用1回</Term>} value={v.writes} onChange={n => set("writes", n)} /><Field label={<Term description="データベースから文書を削除する回数です。">削除 / 利用1回</Term>} value={v.deletes} onChange={n => set("deletes", n)} step={.1} /><Field label={<Term description="Firebaseの文書型データベースに保存するデータ容量です。">Firestore保存容量</Term>} value={v.firestoreGb} onChange={n => set("firestoreGb", n)} step={.1} suffix="GiB" /><Field label={<Term description="電話番号認証などで、1日に送信するショートメッセージの数です。">SMS送信 / 日</Term>} value={v.smsDay} onChange={n => set("smsDay", n)} /></div>
+          <label className="toggle"><span><strong>リアルタイムリスナー</strong><small>読み取り回数を1.6倍で概算</small></span><input aria-label="リアルタイムリスナーを使用" type="checkbox" checked={v.realtime} onChange={e => set("realtime", e.target.checked)} /><i /></label>
+          <label className="toggle"><span><strong><Term description="Firebase Authenticationを企業向けに拡張した認証サービス。月間利用者数に応じて課金されます。">Identity Platform</Term></strong><small>通常のFirebase認証は無料で計算</small></span><input aria-label="Identity Platformを使用" type="checkbox" checked={v.auth === "identity"} onChange={e => set("auth", e.target.checked ? "identity" : "standard")} /><i /></label>
+          <div className="section-label">ファイル保存とサーバー処理</div>
+          <div className="grid2"><Field label="ファイル保存容量" value={v.storageGb} onChange={n => set("storageGb", n)} step={.1} suffix="GB" /><Field label="ファイル転送量 / 日" value={v.downloadMbDay} onChange={n => set("downloadMbDay", n)} suffix="MB" /><Field label="アップロード回数 / 日" value={v.uploadDay} onChange={n => set("uploadDay", n)} /><Field label="ダウンロード回数 / 日" value={v.downloadOpsDay} onChange={n => set("downloadOpsDay", n)} /><Field label={<Term description="サーバー上で自動処理を動かすCloud Functionsの実行回数です。">サーバー処理回数 / 月</Term>} value={v.functionsMonth} onChange={n => set("functionsMonth", n)} /><Field label="平均実行時間" value={v.functionSeconds} onChange={n => set("functionSeconds", n)} step={.1} suffix="秒" /><Field label="使用メモリ" value={v.functionMemory} onChange={n => set("functionMemory", n)} step={.25} suffix="GiB" /><Field label="Webサイト転送量 / 日" value={v.hostingGbDay} onChange={n => set("hostingGbDay", n)} step={.1} suffix="GB" /></div>
         </>}
       </div>
 
       <div className="results">
-        <p className="eyebrow">MONTHLY ESTIMATE</p><div className="total"><span>推定月額</span><strong>{money(result.total)}</strong><small>約 ¥{Math.round(result.total * v.usdJpy).toLocaleString("ja-JP")} / 月</small></div>
-        <div className="result-meta"><span>推定DAU <b>{Math.round(result.dau).toLocaleString()}人</b></span><span>1日セッション <b>{Math.round(result.dailySessions).toLocaleString()}回</b></span></div>
-        <div className="breakdown"><div className="break-title"><span>サービス別内訳</span><b>USD / 月</b></div>{Object.entries(result.parts).map(([name, cost]) => <div className="bar-row" key={name}><div><span>{name}</span><b>{money(cost)}</b></div><div className="bar"><i style={{ width: `${Math.max(cost ? 2 : 0, cost / maxPart * 100)}%` }} /></div></div>)}</div>
+        <p className="eyebrow">月額見積もり</p><div className="total"><span>推定月額</span><strong>{money(result.total)}</strong><small>約 ¥{Math.round(result.total * v.usdJpy).toLocaleString("ja-JP")} / 月</small></div>
+        <div className="result-meta"><span><Term description="1日の間にアプリを利用する人数の推定値です。">推定DAU</Term> <b>{Math.round(result.dau).toLocaleString()}人</b></span><span>1日の利用回数 <b>{Math.round(result.dailySessions).toLocaleString()}回</b></span></div>
+        <div className="breakdown"><div className="break-title"><span>サービス別内訳</span><b>米ドル / 月</b></div>{Object.entries(result.parts).map(([name, cost]) => <div className="bar-row" key={name}><div><span>{({Firestore:"データベース",Authentication:"ユーザー認証","SMS認証":"SMS認証",Storage:"ファイル保存",Functions:"サーバー処理",Hosting:"Webサイト配信"} as Record<string,string>)[name]}</span><b>{money(cost)}</b></div><div className="bar"><i style={{ width: `${Math.max(cost ? 2 : 0, cost / maxPart * 100)}%` }} /></div></div>)}</div>
         <div className="yearly"><span>年間予算の目安</span><strong>{money(result.total * 12)}</strong></div>
-        <label className="rate"><span>参考レート</span><span><input type="number" value={v.usdJpy} onChange={e => set("usdJpy", Number(e.target.value))} /> 円 / USD</span></label>
+        <label className="rate"><span>参考レート</span><span><input type="number" value={v.usdJpy} onChange={e => set("usdJpy", Number(e.target.value))} /> 円 / 米ドル</span></label>
       </div>
     </section>
 
-    <section className="growth"><div><p className="eyebrow">GROWTH SIMULATION</p><h2>ユーザーが増えたら？</h2><p>同じ利用パターンのまま成長した場合の概算です。</p></div><div className="growth-cards">{[100000, 1000000].map(n => { const r = estimate(v, n); return <article key={n}><span>MAU</span><strong>{n.toLocaleString()}</strong><div>{money(r.total)}<small>/ 月</small></div></article>; })}</div></section>
+    <section className="growth"><div><p className="eyebrow">成長シミュレーション</p><h2>ユーザーが増えたら？</h2><p>同じ利用パターンのまま成長した場合の概算です。</p></div><div className="growth-cards">{[100000, 1000000].map(n => { const r = estimate(v, n); return <article key={n}><span><Term description="1か月の間に1回以上アプリを利用した人数です。">月間利用者（MAU）</Term></span><strong>{n.toLocaleString()}</strong><div>{money(r.total)}<small>/ 月</small></div></article>; })}</div></section>
 
     <section className="notes"><div><span>計算について</span><h2>概算を、意思決定の<br />スタート地点に。</h2></div><div className="note-grid"><p><b>日次無料枠を反映</b>Firestore・Hosting・SMSは、月合算ではなく1日ごとに無料枠を差し引いています。</p><p><b>リージョンに注意</b>Firestoreはus-central1、Storageは旧appspot.comバケットの基準価格による概算です。</p><p><b>含まれない費用</b>CPU、外向き通信、Cloud Build、Artifact Registry、App Hosting等の一部費用は含みません。</p><p><b>最終確認は公式で</b>実際の料金はリージョン・通貨・構成で異なります。導入前に公式料金ページを確認してください。</p></div></section>
     <footer><div className="brand"><span className="brandmark">F</span> Firebase Cost Lab</div><p>非公式の概算ツールです。Google / Firebaseとは関係ありません。</p><div><a href="https://firebase.google.com/pricing" target="_blank" rel="noreferrer">Firebase料金</a><a href="https://cloud.google.com/firestore/pricing" target="_blank" rel="noreferrer">Firestore料金</a></div></footer>

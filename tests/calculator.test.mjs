@@ -14,5 +14,7 @@ test("calculator keeps daily free-tier and pricing metadata", async () => {
   assert.match(source, /freeReadDay: 50000/);
   assert.match(source, /freeWriteDay: 20000/);
   assert.match(source, /freeDay: 10/);
-  assert.match(source, /GROWTH SIMULATION/);
+  assert.match(source, /成長シミュレーション/);
+  assert.match(source, /Monthly Active Usersの略/);
+  assert.match(source, /Daily Active Usersの略/);
 });
